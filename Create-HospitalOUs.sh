@@ -1,5 +1,5 @@
 Import-Module ActiveDirectory
-
+# Base DN for the hospital departments
 $domainDN = "DC=lab,DC=local"
 $baseOU   = "OU=hospital_departments,$domainDN"
 
