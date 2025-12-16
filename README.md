@@ -1,156 +1,156 @@
-# Hospital Active Directory Lab (Windows Server 2022 + Windows 11)
+# Hospital Active Directory Lab (CMD-First)
 
-This project builds a hospital-style Active Directory lab using Windows Server 2022 (Domain Controller) and Windows 11 Enterprise (client).  
-The lab simulates departments, finance, and role-based OUs, and demonstrates PowerShell automation and GPO testing.
+This project demonstrates the build of a **hospital-style Active Directory environment** using Windows Server 2022 and Windows 11 Enterprise.
+The lab focuses on **core IT administration fundamentals**: directory design, users and groups, Group Policy Objects (GPOs), and verification using **command-line tools (CMD)**.
 
----
-
-## Lab Setup
-
-Domain Controller (Windows Server 2022)
-- Static IP: 192.168.1.10
-- DNS: points to itself
-- Promoted to Domain Controller: lab.local
-- Roles: AD DS, DNS
-
-Windows 11 Client
-- Static IP: 192.168.1.20
-- DNS: points to 192.168.1.10
-- Joined to lab.local
+PowerShell is intentionally minimized to reflect a CMD-first administrative workflow. Where no reasonable CMD equivalent exists (notably GPO import/export), minimal PowerShell is used and clearly marked.
 
 ---
 
-## OU Design
+## Lab Objectives
 
-Finance_Hospital (top-level hospital finance)
-- Accountants
-- Analysts
-- Portfolio_Administrators
-- Billing
-- Revenue_Cycle
-- Admins
-- Workstations
-
-hospital_departments (all medical and operational departments)
-- Neurology
-  - Doctors
-  - Nurses
-  - Physician_Assistants
-  - Admins
-  - Schedulers
-  - Workstations
-- Cardiology (same role OUs as Neurology)
-- ENT (same role OUs)
-- Pediatrics (same role OUs)
-- Maternity (same role OUs)
-- Finance (same role OUs as Finance_Hospital)
+* Build a functional Active Directory domain from scratch
+* Design a realistic OU structure for a hospital environment
+* Create users and security groups aligned to departments and roles
+* Apply and test Group Policy Objects
+* Verify configuration using native Windows command-line tools
 
 ---
 
-## Scripts
+## Environment
 
-Create-HospitalOUs.ps1  
-- Creates the OU tree for hospital_departments and Finance_Hospital.  
-- Parameters allow specifying domain DN, department names, and roles.
+### Virtualization
 
-Verify-DeptOUs.ps1  
-- Verifies that all expected role OUs exist under each department.  
-- Flags missing OUs in red.  
-- Supports single-department or all-department verification.
+* Hypervisor: **VirtualBox**
+* All virtual machines are built **fresh** for this project
+* Old lab VMs may be safely deleted
+
+### Virtual Machines
+
+**Domain Controller**
+
+* OS: Windows Server 2022 (Desktop Experience)
+* Hostname: DC01
+* Static IP: 192.168.1.10
+* DNS: 192.168.1.10
+* Roles: Active Directory Domain Services, DNS
+* Domain: lab.local
+
+**Client Workstation**
+
+* OS: Windows 11 Enterprise
+* Hostname: WIN11-CLIENT
+* Static IP: 192.168.1.20
+* DNS: 192.168.1.10
+* Joined to: lab.local
+
+**Linux Client (Optional)**
+
+* OS: Ubuntu
+* Purpose: domain awareness and future cross-platform testing
 
 ---
 
-## PowerShell Command Reference
+## Active Directory Design
 
-This section documents all commands used in the lab, with explanations.
+### Organizational Unit Structure
 
-### Importing AD Module and Checking Domain
+**Finance_Hospital**
 
-```powershell
-Import-Module ActiveDirectory
-(Get-ADDomain).DistinguishedName
-Description: Loads Active Directory module and displays the domain DN (e.g., DC=lab,DC=local).
+* Accountants
+* Analysts
+* Portfolio_Administrators
+* Billing
+* Revenue_Cycle
+* Admins
+* Workstations
 
-Creating OUs
-powershell
+**Hospital_Departments**
 
-New-ADOrganizationalUnit -Name "Finance" -Path "DC=lab,DC=local"
-Description: Creates a new OU at the domain root.
+* Neurology
+* Cardiology
+* ENT
+* Pediatrics
+* Maternity
 
-powershell
+Each department contains the following child OUs:
 
-"Doctors","Nurses" | ForEach-Object {
-    New-ADOrganizationalUnit -Name $_ -Path "OU=Neurology,OU=hospital_departments,DC=lab,DC=local"
-}
-Description: Creates multiple role OUs under the Neurology department.
+* Doctors
+* Nurses
+* Physician_Assistants
+* Admins
+* Schedulers
+* Workstations
 
-Renaming OUs
-powershell
+---
 
-Rename-ADObject -Identity "OU=Finance,DC=lab,DC=local" -NewName "Finance_Hospital"
-Rename-ADObject -Identity "OU=Hospital,DC=lab,DC=local" -NewName "hospital_departments"
-Description: Renames existing OUs for clarity.
+## Users and Groups
 
-Moving Users
-powershell
+* Users are created for each role within each department
+* Security groups align to departmental roles
+* Group membership reflects least-privilege principles
+* Users and groups are imported using **CSVDE / LDIFDE** for repeatability
 
-$targetOU = "OU=Finance,OU=hospital_departments,DC=lab,DC=local"
-Move-ADObject -Identity (Get-ADUser -Identity testuser).DistinguishedName -TargetPath $targetOU
-Description: Moves user accounts into the correct OU.
+---
 
-Listing Users and OUs
-powershell
+## Group Policy Objects
 
-Get-ADUser -Identity testuser | Select Name,DistinguishedName
-Description: Shows the DistinguishedName of a user.
+GPOs are used to enforce:
 
-powershell
+* Security baseline settings
+* Workstation restrictions
+* User environment controls
 
-Get-ADOrganizationalUnit -SearchBase "OU=Neurology,OU=hospital_departments,DC=lab,DC=local" -SearchScope OneLevel -Filter * | Select Name
-Description: Lists all sub-OUs under Neurology.
+### GPO Management Approach
 
-Deleting OUs Safely
-Step 1 – Disable protection:
+* GPOs are created using the Group Policy Management Console (GPMC)
+* GPOs are exported and stored in the repository
+* GPO application is verified using CMD-based tools
 
-powershell
+---
 
-Set-ADOrganizationalUnit -Identity "OU=Doctors,OU=Finance,DC=lab,DC=local" -ProtectedFromAccidentalDeletion $false
-Step 2 – Remove the OU:
+## Validation and Verification
 
-powershell
+Configuration is validated using built-in Windows command-line tools:
 
-Remove-ADOrganizationalUnit -Identity "OU=Doctors,OU=Finance,DC=lab,DC=local" -Recursive -Confirm:$false
-Description: Unprotects and deletes an unwanted OU.
+* `ipconfig`, `nslookup`
+* `dsquery`, `net user`, `net group`
+* `gpupdate /force`
+* `gpresult /r` and `gpresult /h`
 
-Protecting and Unprotecting OUs
-powershell
+Screenshots of verification results are included in the repository.
 
-Set-ADOrganizationalUnit -Identity "OU=Finance,DC=lab,DC=local" -ProtectedFromAccidentalDeletion $false
-Set-ADOrganizationalUnit -Identity "OU=Finance,DC=lab,DC=local" -ProtectedFromAccidentalDeletion $true
-Description: Toggles the accidental deletion protection flag on OUs.
+---
 
-Adding Users to Groups
-powershell
+## Repository Structure
 
-Add-ADGroupMember -Identity "Domain Admins" -Members "admin"
-Description: Adds the user "admin" to the Domain Admins group.
+```
+Hospital-AD-Lab/
+  README.md
+  diagrams/
+  build/
+  imports/
+  scripts/
+  gpo-backups/
+  screenshots/
+```
 
-Domain Controller Verification
-cmd
+---
 
-echo %logonserver%
-nltest /dsgetdc:lab.local
-Description: Confirms which Domain Controller the user is logged into and verifies the DC for the domain.
+## Why This Lab
 
-Windows 11 Client Commands
-powershell
+This project reflects real-world IT administration tasks commonly performed by desktop support and junior system administrators. It emphasizes:
 
-Add-Computer -DomainName lab.local -Credential LAB\Administrator -Restart
-Description: Joins the Windows 11 machine to the lab.local domain.
+* Accuracy over automation gimmicks
+* Verification over assumptions
+* Reproducibility over one-off configuration
 
-cmd
+---
 
-gpupdate /force
-gpresult /r
-Description: Forces Group Policy to update and checks applied GPOs.
+## Next Steps
 
+This lab is intentionally foundational. It may later be extended with:
+
+* Advanced GPO hardening
+* Centralized logging
+* Security auditing and monitoring
