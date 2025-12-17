@@ -23,7 +23,6 @@ PowerShell is intentionally minimized to reflect a CMD-first administrative work
 
 * Hypervisor: **VirtualBox**
 * All virtual machines are built **fresh** for this project
-* Old lab VMs may be safely deleted
 
 ### Virtual Machines
 
@@ -44,10 +43,10 @@ PowerShell is intentionally minimized to reflect a CMD-first administrative work
 * DNS: 192.168.1.10
 * Joined to: lab.local
 
-**Linux Client (Optional)**
+**Linux Client**
 
 * OS: Ubuntu
-* Purpose: domain awareness and future cross-platform testing
+* Purpose: domain awareness and cross-platform testing
 
 ---
 
@@ -141,7 +140,7 @@ Hospital-AD-Lab/
 
 This project reflects real-world IT administration tasks commonly performed by desktop support and junior system administrators. It emphasizes:
 
-* Accuracy over automation gimmicks
+* Accuracy over automation
 * Verification over assumptions
 * Reproducibility over one-off configuration
 
